@@ -7,6 +7,13 @@ import boto3
 import time
 
 #######################################
+### Global Vars #######################
+#######################################
+
+sns_arn='arn:aws:sns:us-west-2:976168295228:Password_Expiration'
+sns_subject='Upcoming Password Expirations'
+
+#######################################
 ### Main Function #####################
 #######################################
 
@@ -28,10 +35,13 @@ def main():
 
 def get_report():
     client = boto3.client('iam')
+
+    print("Generating Report...")
     client.generate_credential_report()
 
     time.sleep(2)
 
+    print("Pulling Report...")
     payload = client.get_credential_report()
 
     data = payload['Content']
@@ -41,6 +51,7 @@ def get_report():
 
 def read_data(data):
     value = ''
+    print("Parsing Report...")
     for i in csv.DictReader(data.split()):
         print(i['user'])
         if i['password_last_changed'] == 'not_supported':
@@ -83,12 +94,13 @@ def read_data(data):
     return value
 
 
-def sns_push(out):
+def sns_push(sns_message):
+    print("Pushing to SNS")
     client = boto3.client('sns')
     response = client.publish(
-        TopicArn='arn:aws:sns:us-west-2:976168295228:Password_Expiration',
-        Message=out,
-        Subject='Upcoming Password Expirations',
+        TopicArn=sns_arn,
+        Message=sns_message,
+        Subject=sns_subject,
         MessageStructure='string'
     )
 
