@@ -72,17 +72,18 @@ def read_data(data):
         diff_days   = diff.total_seconds()/3600/24
         expiration  = changed + timedelta(45)
 
-        if diff_days >= -1:
+        if diff_days >= 45:
             value = value + \
-                '{}\'s password WILL expire at {}.'.format(
+                '{}\'s password HAS expired at {}.'.format(
                     i['user'],
                     expiration
                 ) + \
                 "\n"
+            continue
 
-        if diff_days >= 45:
+        if diff_days >= 38:
             value = value + \
-                '{}\'s password HAS expired at {}.'.format(
+                '{}\'s password WILL expire at {}.'.format(
                     i['user'],
                     expiration
                 ) + \
