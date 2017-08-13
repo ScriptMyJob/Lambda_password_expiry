@@ -10,17 +10,28 @@ import time
 ### Global Vars #######################
 #######################################
 
-sns_arn='arn:aws:sns:us-west-2:976168295228:Password_Expiration'
-sns_subject='Upcoming Password Expirations'
+sns_arn     = 'arn:aws:sns:us-west-2:976168295228:Password_Expiration'
+account     = 'scriptmyjob'
+sns_subject = 'Upcoming Password Expirations - ' + account
 
 #######################################
 ### Main Function #####################
 #######################################
 
+
 def main():
     report = get_report()
     out = read_data(report)
-    sns_push(out)
+
+    if out != 'There are no expiring passwords.':
+        email = "Passwords can be reset at:" + \
+            "\n" + "\n" + \
+            account + ".signin.aws.amazon.com/console" + \
+            "\n" + "\n" + \
+            out
+
+        sns_push(email)
+
 
     # print output for CLI execution
     print(out),
@@ -81,7 +92,7 @@ def read_data(data):
                 "\n"
             continue
 
-        if diff_days >= 38:
+        if diff_days >= 0:
             value = value + \
                 '{}\'s password WILL expire at {}.'.format(
                     i['user'],
