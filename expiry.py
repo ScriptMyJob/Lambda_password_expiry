@@ -62,6 +62,16 @@ def get_report():
 
 def read_data(data):
     value = ''
+    print("Pulling current Policy...")
+
+    passwd_age  = get_password_age()
+
+    if isinstance( passwd_age, int ):
+        passwd_notification = passwd_age - 7
+    else:
+        value = 'Password IAM Policy Does not have expiring passwords.'
+        return
+
     print("Parsing Report...")
     for i in csv.DictReader(data.split()):
         print(i['user'])
@@ -83,7 +93,7 @@ def read_data(data):
         diff_days   = diff.total_seconds()/3600/24
         expiration  = changed + timedelta(45)
 
-        if diff_days >= 45:
+        if diff_days >= passwd_age :
             value = value + \
                 '{}\'s password HAS expired at {}.'.format(
                     i['user'],
@@ -92,7 +102,7 @@ def read_data(data):
                 "\n"
             continue
 
-        if diff_days >= 0:
+        if diff_days >= passwd_notification :
             value = value + \
                 '{}\'s password WILL expire at {}.'.format(
                     i['user'],
@@ -103,7 +113,19 @@ def read_data(data):
     if value == '':
         value = 'There are no expiring passwords.'
 
+    value = "Currnet Policy's have passwords expiring every " + \
+        str(passwd_age) + " days" + \
+        "\n" + "\n" + value
+
     return value
+
+def get_password_age():
+    client = boto3.client('iam')
+    payload = client.get_account_password_policy()
+    data = payload['PasswordPolicy']['MaxPasswordAge']
+
+    print(str(data))
+    return data
 
 
 def sns_push(sns_message):
