@@ -28,10 +28,12 @@ def main():
             "\n" + "\n" + \
             account + ".signin.aws.amazon.com/console" + \
             "\n" + "\n" + \
+            "Currnet Policy's have passwords expiring every " + \
+            str(passwd_age) + " days" + \
+            "\n" + "\n" + \
             out
 
         sns_push(email)
-
 
     # print output for CLI execution
     print(out),
@@ -64,6 +66,7 @@ def read_data(data):
     value = ''
     print("Pulling current Policy...")
 
+    global passwd_age
     passwd_age  = get_password_age()
 
     if isinstance( passwd_age, int ):
@@ -95,7 +98,7 @@ def read_data(data):
 
         if diff_days >= passwd_age :
             value = value + \
-                '{}\'s password HAS expired at {}.'.format(
+                '{:>20}\'s password HAS expired at {}.'.format(
                     i['user'],
                     expiration
                 ) + \
@@ -104,7 +107,7 @@ def read_data(data):
 
         if diff_days >= passwd_notification :
             value = value + \
-                '{}\'s password WILL expire at {}.'.format(
+                '{:>20}\'s password WILL expire at {}.'.format(
                     i['user'],
                     expiration
                 ) + \
@@ -113,10 +116,6 @@ def read_data(data):
     if value == '':
         value = 'There are no expiring passwords.'
 
-    value = "Currnet Policy's have passwords expiring every " + \
-        str(passwd_age) + " days" + \
-        "\n" + "\n" + value
-
     return value
 
 def get_password_age():
@@ -124,7 +123,7 @@ def get_password_age():
     payload = client.get_account_password_policy()
     data = payload['PasswordPolicy']['MaxPasswordAge']
 
-    print(str(data))
+    print(str(data) + " days")
     return data
 
 
