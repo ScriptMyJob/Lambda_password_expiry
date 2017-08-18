@@ -4,6 +4,7 @@
 import csv
 from datetime import datetime, timedelta
 import boto3
+import sys
 import time
 
 #######################################
@@ -14,32 +15,28 @@ sns_arn     = 'arn:aws:sns:us-west-2:976168295228:Password_Expiration'
 account     = 'scriptmyjob'
 sns_subject = 'Upcoming Password Expirations - ' + account
 
+iam         = boto3.client('iam')
+sns         = boto3.client('sns')
+
 #######################################
 ### Main Function #####################
 #######################################
 
-
 def main():
     report = get_report()
-    out = read_data(report)
 
-    if out != 'There are no expiring passwords.':
-        email = "Passwords can be reset at:" + \
-            "\n" + "\n" + \
-            account + ".signin.aws.amazon.com/console" + \
-            "\n" + "\n" + \
-            "Currnet Policy's have passwords expiring every " + \
-            str(passwd_age) + " days" + \
-            "\n" + "\n" + \
-            out
+    get_password_age()
+    test_policy(passwd_age)
 
-        sns_push(email)
+    output = read_data(report)
+
+    out_logic(output)
 
     # print output for CLI execution
-    print(out),
+    print(output),
 
     # return output for manually running lambda
-    return out
+    return output
 
 
 #######################################
@@ -47,33 +44,33 @@ def main():
 #######################################
 
 def get_report():
-    client = boto3.client('iam')
-
     print("Generating Report...")
-    client.generate_credential_report()
 
-    time.sleep(2)
+    state = iam.generate_credential_report()['State']
+    print(state)
+
+    while state != 'COMPLETE':
+        state = iam.generate_credential_report()['State']
+        print("Report in progress: %s", state)
+        time.sleep(0.25)
 
     print("Pulling Report...")
-    payload = client.get_credential_report()
-
-    data = payload['Content']
+    data = iam.get_credential_report()['Content']
 
     return data
 
 
+def test_policy(passwd_age):
+    if isinstance( passwd_age, int ):
+        global passwd_notification
+        passwd_notification = passwd_age - 7;
+    else:
+        sns_push('Password IAM Policy Password Expiration has been disabled.')
+        sys.exit()
+
+
 def read_data(data):
     value = ''
-    print("Pulling current Policy...")
-
-    global passwd_age
-    passwd_age  = get_password_age()
-
-    if isinstance( passwd_age, int ):
-        passwd_notification = passwd_age - 7
-    else:
-        value = 'Password IAM Policy Does not have expiring passwords.'
-        return
 
     print("Parsing Report...")
     for i in csv.DictReader(data.split()):
@@ -94,7 +91,7 @@ def read_data(data):
         # date difference
         diff        = now - changed
         diff_days   = diff.total_seconds()/3600/24
-        expiration  = changed + timedelta(45)
+        expiration  = changed + timedelta(passwd_age)
 
         if diff_days >= passwd_age :
             value = value + \
@@ -118,19 +115,20 @@ def read_data(data):
 
     return value
 
-def get_password_age():
-    client = boto3.client('iam')
-    payload = client.get_account_password_policy()
-    data = payload['PasswordPolicy']['MaxPasswordAge']
 
-    print(str(data) + " days")
-    return data
+def get_password_age():
+    print("Pulling current password policy...")
+
+    global passwd_age
+    passwd_age = iam.get_account_password_policy()['PasswordPolicy']['MaxPasswordAge']
+    print(str(passwd_age) + " days")
+
+    return passwd_age
 
 
 def sns_push(sns_message):
     print("Pushing to SNS")
-    client = boto3.client('sns')
-    response = client.publish(
+    response = sns.publish(
         TopicArn=sns_arn,
         Message=sns_message,
         Subject=sns_subject,
@@ -138,6 +136,19 @@ def sns_push(sns_message):
     )
 
     return response
+
+def out_logic(out):
+    if out != 'There are no expiring passwords.':
+        email = "Passwords can be reset at:" + \
+            "\n" + "\n" + \
+            account + ".signin.aws.amazon.com/console" + \
+            "\n" + "\n" + \
+            "Currnet Policy's have passwords expiring every " + \
+            str(passwd_age) + " days" + \
+            "\n" + "\n" + \
+            out
+
+        sns_push(email)
 
 
 #######################################
