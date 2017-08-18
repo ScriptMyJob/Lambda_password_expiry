@@ -60,6 +60,16 @@ def get_report():
     return data
 
 
+def get_password_age():
+    print("Pulling current password policy...")
+
+    global passwd_age
+    passwd_age = iam.get_account_password_policy()['PasswordPolicy']['MaxPasswordAge']
+    print(str(passwd_age) + " days")
+
+    return passwd_age
+
+
 def test_policy(passwd_age):
     if isinstance( passwd_age, int ):
         global passwd_notification
@@ -116,16 +126,6 @@ def read_data(data):
     return value
 
 
-def get_password_age():
-    print("Pulling current password policy...")
-
-    global passwd_age
-    passwd_age = iam.get_account_password_policy()['PasswordPolicy']['MaxPasswordAge']
-    print(str(passwd_age) + " days")
-
-    return passwd_age
-
-
 def sns_push(sns_message):
     print("Pushing to SNS")
     response = sns.publish(
@@ -136,6 +136,7 @@ def sns_push(sns_message):
     )
 
     return response
+
 
 def out_logic(out):
     if out != 'There are no expiring passwords.':
