@@ -26,7 +26,7 @@ def main(account, sns_arn):
 
     output = read_data(report)
 
-    out_logic(account, output)
+    out_logic(account, sns_arn, output)
 
     # print output for CLI execution
     print(output),
@@ -122,7 +122,7 @@ def read_data(data):
     return value
 
 
-def sns_push(account, sns_message):
+def sns_push(account, sns_arn, sns_message):
     print("Pushing to SNS")
     sns_subject = 'Upcoming Password Expirations - ' + account
     response = sns.publish(
@@ -135,7 +135,7 @@ def sns_push(account, sns_message):
     return response
 
 
-def out_logic(account, out):
+def out_logic(account, sns_arn, out):
     if out != 'There are no expiring passwords.':
         email = "Passwords can be reset at:" + \
             "\n" + "\n" + \
@@ -146,7 +146,7 @@ def out_logic(account, out):
             "\n" + "\n" + \
             out
 
-        sns_push(account, email)
+        sns_push(account, sns_arn, email)
 
 
 #######################################
