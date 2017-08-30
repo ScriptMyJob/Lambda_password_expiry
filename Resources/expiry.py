@@ -4,16 +4,12 @@
 import csv
 from datetime import datetime, timedelta
 import boto3
-import sys
+import sys, os
 import time
 
 #######################################
 ### Global Vars #######################
 #######################################
-
-sns_arn     = 'arn:aws:sns:us-west-2:976168295228:Password_Expiration'
-account     = 'scriptmyjob'
-sns_subject = 'Upcoming Password Expirations - ' + account
 
 iam         = boto3.client('iam')
 sns         = boto3.client('sns')
@@ -22,15 +18,15 @@ sns         = boto3.client('sns')
 ### Main Function #####################
 #######################################
 
-def main():
+def main(account, sns_arn):
     report = get_report()
 
     get_password_age()
-    test_policy(passwd_age)
+    test_policy(account, passwd_age)
 
     output = read_data(report)
 
-    out_logic(output)
+    out_logic(account, output)
 
     # print output for CLI execution
     print(output),
@@ -51,7 +47,7 @@ def get_report():
 
     while state != 'COMPLETE':
         state = iam.generate_credential_report()['State']
-        print("Report in progress: %s", state)
+        print("Report in progress: %s".format(state))
         time.sleep(0.25)
 
     print("Pulling Report...")
@@ -70,12 +66,12 @@ def get_password_age():
     return passwd_age
 
 
-def test_policy(passwd_age):
+def test_policy(account, passwd_age):
     if isinstance( passwd_age, int ):
         global passwd_notification
         passwd_notification = passwd_age - 7;
     else:
-        sns_push('Password IAM Policy Password Expiration has been disabled.')
+        sns_push(account, 'Password IAM Policy Password Expiration has been disabled.')
         sys.exit()
 
 
@@ -126,8 +122,9 @@ def read_data(data):
     return value
 
 
-def sns_push(sns_message):
+def sns_push(account, sns_message):
     print("Pushing to SNS")
+    sns_subject = 'Upcoming Password Expirations - ' + account
     response = sns.publish(
         TopicArn=sns_arn,
         Message=sns_message,
@@ -138,7 +135,7 @@ def sns_push(sns_message):
     return response
 
 
-def out_logic(out):
+def out_logic(account, out):
     if out != 'There are no expiring passwords.':
         email = "Passwords can be reset at:" + \
             "\n" + "\n" + \
@@ -149,7 +146,7 @@ def out_logic(out):
             "\n" + "\n" + \
             out
 
-        sns_push(email)
+        sns_push(account, email)
 
 
 #######################################
@@ -157,9 +154,13 @@ def out_logic(out):
 #######################################
 
 if __name__ == "__main__":
-    main()
-
+    sns_arn     = 'arn:aws:sns:us-west-2:976168295228:Password_Expiration'
+    account     = 'scriptmyjob'
+    main(account, sns_arn)
 
 def execute_me_lambda(event, context):
-    out = main()
+    sns_arn     = os.environ['sns_arn']
+    account     = os.environ['account']
+
+    out = main(account, sns_arn)
     return out

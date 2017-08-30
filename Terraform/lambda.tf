@@ -25,4 +25,10 @@ resource "aws_lambda_function" "expiry_test" {
     runtime         = "python2.7"
     memory_size     = 128
     timeout         = 5
+    environment {
+        variables = {
+            account = "${data.aws_iam_account_alias.current.account_alias}",
+            sns_arn = "${aws_sns_topic.password_expiration.arn}"
+        }
+    }
 }

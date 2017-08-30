@@ -16,3 +16,10 @@ variable "lambda" {
         name    = "lambda_expiry_test"
     }
 }
+
+########################################
+### Data ###############################
+########################################
+
+data "aws_iam_account_alias" "current" {}
+
