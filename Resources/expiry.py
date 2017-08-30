@@ -21,8 +21,7 @@ sns         = boto3.client('sns')
 def main(account, sns_arn):
     report = get_report()
 
-    get_password_age()
-    test_policy(account, passwd_age)
+    get_password_age(account, sns_arn)
 
     output = read_data(report)
 
@@ -56,23 +55,19 @@ def get_report():
     return data
 
 
-def get_password_age():
+def get_password_age(account, sns_arn):
     print("Pulling current password policy...")
 
     global passwd_age
-    passwd_age = iam.get_account_password_policy()['PasswordPolicy']['MaxPasswordAge']
+    try:
+        passwd_age = iam.get_account_password_policy()['PasswordPolicy']['MaxPasswordAge']
+    except KeyError:
+        sns_push(account, sns_arn, 'Password IAM Policy Password Expiration has been disabled.')
+        sys.exit()
+
     print(str(passwd_age) + " days")
 
     return passwd_age
-
-
-def test_policy(account, passwd_age):
-    if isinstance( passwd_age, int ):
-        global passwd_notification
-        passwd_notification = passwd_age - 7;
-    else:
-        sns_push(account, 'Password IAM Policy Password Expiration has been disabled.')
-        sys.exit()
 
 
 def read_data(data):
@@ -87,17 +82,19 @@ def read_data(data):
             continue
 
         # date information for parsing
-        fmt         = '%Y-%m-%dT%H:%M:%S+00:00'
-        date        = i['password_last_changed']
+        fmt                 = '%Y-%m-%dT%H:%M:%S+00:00'
+        date                = i['password_last_changed']
 
         # date changed and now
-        changed     = datetime.strptime(date, fmt)
-        now         = datetime.now()
+        changed             = datetime.strptime(date, fmt)
+        now                 = datetime.now()
 
         # date difference
-        diff        = now - changed
-        diff_days   = diff.total_seconds()/3600/24
-        expiration  = changed + timedelta(passwd_age)
+        diff                = now - changed
+        diff_days           = diff.total_seconds()/3600/24
+        expiration          = changed + timedelta(passwd_age)
+
+        passwd_notification = passwd_age - 7
 
         if diff_days >= passwd_age :
             value = value + \
@@ -125,10 +122,10 @@ def read_data(data):
 def sns_push(account, sns_arn, sns_message):
     print("Pushing to SNS")
     sns_subject = 'Upcoming Password Expirations - ' + account
-    response = sns.publish(
-        TopicArn=sns_arn,
-        Message=sns_message,
-        Subject=sns_subject,
+    response    = sns.publish(
+        TopicArn        =sns_arn,
+        Message         =sns_message,
+        Subject         =sns_subject,
         MessageStructure='string'
     )
 
