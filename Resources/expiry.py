@@ -62,7 +62,7 @@ def get_password_age(account, sns_arn):
     try:
         passwd_age = iam.get_account_password_policy()['PasswordPolicy']['MaxPasswordAge']
     except KeyError:
-        sns_push(account, sns_arn, 'Password IAM Policy Password Expiration has been disabled.')
+        sns_push(account, sns_arn, 'IAM Policy Password Expiration has been disabled.')
         sys.exit()
 
     print(str(passwd_age) + " days")
@@ -138,7 +138,7 @@ def out_logic(account, sns_arn, out):
             "\n" + "\n" + \
             account + ".signin.aws.amazon.com/console" + \
             "\n" + "\n" + \
-            "Currnet Policy's have passwords expiring every " + \
+            "Current policies have passwords expiring every " + \
             str(passwd_age) + " days" + \
             "\n" + "\n" + \
             out
