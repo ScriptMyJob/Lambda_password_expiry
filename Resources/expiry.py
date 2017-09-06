@@ -46,7 +46,7 @@ def get_report():
 
     while state != 'COMPLETE':
         state = iam.generate_credential_report()['State']
-        print("Report in progress: %s".format(state))
+        print("Report in progress: {}".format(state))
         time.sleep(0.25)
 
     print("Pulling Report...")
