@@ -14,7 +14,7 @@ Run Terraform on the `Terraform/` directory:
 terraform apply Terraform/
 ```
 
-This will run at 8 AM CST everyday, and can be modified in cron.tf
+This will run at 8 AM CDT everyday, and can be modified in cron.tf
 
 You can subscribe directly to the SNS Topic `Password_Expiration` in us-west-2:
 
